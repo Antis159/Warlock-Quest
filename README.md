@@ -2,7 +2,7 @@
  Game in progress with Unity for android devices
  
  The main systems that are currently developed are:
- pathfinding, building, combat, basic inventory, data saving/loading.
+ * pathfinding, building, combat, basic inventory, data saving/loading.
  
 ![alt text](https://github.com/Antis159/Warlock-Quest/blob/main/Images/Basic_Game_ScreenShot.png) 
 
