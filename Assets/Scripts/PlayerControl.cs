@@ -14,6 +14,7 @@ public class PlayerControl : MonoBehaviour
 
     public float moveSpeed = 5f;
     private MoveCamera _camera;
+    private string lastScene;
     public bool inCombat;
     public bool isDead = false;
     public bool stopMove = false;
@@ -22,9 +23,10 @@ public class PlayerControl : MonoBehaviour
     private List<Vector3> movePath = new List<Vector3>();
     public int currentFloorLevel;
 
-    private Vector3 moveDir;
+    public Vector3 moveDir;
     private GameObject lastEnemy;
     private Vector3 lastEnemyPos;
+    private CombatSimulate lastCS;
 
     //Animations
     private Animator anim;
@@ -35,9 +37,13 @@ public class PlayerControl : MonoBehaviour
     [Space]
 
     //Attack
-    public GameObject fireOrbAttack;
+    public GameObject combatSimulatorObj;
+    public GameObject weaponAttackParticles;
     [Space]
 
+    public GameObject[] allOrbs;
+
+    [Space]
     //Buttons
     bool upPressed;
     bool rightPressed;
@@ -45,8 +51,11 @@ public class PlayerControl : MonoBehaviour
     bool leftPressed;
     [Space]
 
+    public int buildingsUnlocked;
+    [Space]
+
     //Stats
-    public int damage;
+    public float weaponDamage;
     public float attackSpeed;
     public int maxHealth;
     public int currentHealth;
@@ -55,39 +64,66 @@ public class PlayerControl : MonoBehaviour
 
     public Inventory inventory;
     public UIController _UIController;
-    public GridStorage gridStorage;
+
+    //Weapon
+    public GameObject weapon;
+
+    private SpriteRenderer playerSpriteRenderer;
+    private SpriteRenderer weaponSpriteRenderer;
 
     void Start()
     {
         inventory = GameObject.FindGameObjectWithTag("Inventory").GetComponent<Inventory>();
         _camera = Camera.main.GetComponent<MoveCamera>();
-        gridStorage = gameObject.GetComponent<GridStorage>();
         anim = GetComponent<Animator>();
         playerMoveGO = transform.GetChild(0).transform;
         playerMoveGO.parent = null;
         currentHealth = maxHealth;
         currentMana = maxMana;
         pathfinding = GetComponent<Pathfinding>();
+        playerSpriteRenderer = gameObject.GetComponent<SpriteRenderer>();
     }
 
     void Update()
     {
         CheckHealth_Mana();
-        IsDead();
         Move();
+        WeaponPosCheck();
     }
 
+    public void WeaponPosCheck()
+    {
+        if (transform.GetChild(0).GetComponentInChildren<Weapon>())
+        {
+            transform.GetChild(0).GetComponentInChildren<Weapon>().transform.localPosition = Vector3.zero;
+        }
+    }
     public void ReceiveDamage(int damage)
     {
         currentHealth -= damage;
     }
 
-    public void IsDead()
+    public void EquipWeapon(GameObject orb)
+    {
+        if (transform.GetChild(0).GetComponentInChildren<Weapon>())
+        {
+            Destroy(transform.GetChild(0).GetComponentInChildren<Weapon>().gameObject);
+        }
+        GameObject startWeapon = Instantiate(orb, Vector3.zero, Quaternion.identity);
+        startWeapon.transform.parent = transform.GetChild(0);
+        weapon = startWeapon;
+        Weapon tempWeapon = orb.GetComponent<Weapon>();
+        attackSpeed = tempWeapon.attackSpeed;
+        weaponDamage = tempWeapon.attackDamage;
+        weaponAttackParticles = tempWeapon.attackParticles;
+        weaponSpriteRenderer = weapon.GetComponent<SpriteRenderer>();
+    }
+
+    public void Death()
     {
         if (currentHealth <= 0)
         {
             isDead = true;
-            CombatEnd();
         }
         else
             isDead = false;
@@ -99,36 +135,12 @@ public class PlayerControl : MonoBehaviour
         SetAllButtonFalse();
         lastEnemy = enemy;
         lastEnemyPos = enemy.transform.position;
-        inCombat = true;
-        enemy.GetComponent<Enemy>().StartCombat();
-        StartCoroutine(SimulateCombat());
+        CombatSimulate CS = Instantiate(combatSimulatorObj).GetComponent<CombatSimulate>();
+        lastCS = CS;
+        CS.setEnemy(lastEnemy.GetComponent<Enemy>());
+        CS.setPlayer(this);
     }
 
-    public void CombatEnd()
-    {
-        inCombat = false;
-        lastEnemy.GetComponent<Enemy>().EndCombat();
-        //if (!IsLastEnemy())
-        //    MoveToDeadEnemy();
-
-        //lastEnemy = null;
-    }
-    IEnumerator SimulateCombat()
-    {
-        Enemy enemy = lastEnemy.GetComponent<Enemy>();
-        while (inCombat)
-        {
-            yield return new WaitForSeconds(attackSpeed);
-            Instantiate(fireOrbAttack, lastEnemyPos, Quaternion.identity);
-            enemy.ReceiveDamage(damage);
-
-            if (enemy.GetCurrentHealth() <= 0)
-            {
-                CombatEnd();
-                break;
-            }
-        }
-    }
     public void CheckHealth_Mana()
     {
         if (currentHealth > maxHealth)
@@ -173,11 +185,16 @@ public class PlayerControl : MonoBehaviour
         else
             Debug.Log("MoveToPoint function didn't work");
     }
+
+    public void LoadWeapon(int weaponInt)
+    {
+        EquipWeapon(allOrbs[weaponInt]);
+    }
     IEnumerator LoadScene(string sceneToLoad)
     {
-        gridStorage.StoreGrid();
         _UIController.FadeScreen(0.5f);
         stopMove = true;
+        lastScene = SceneManager.GetActiveScene().name;
 
         if (SceneManager.GetActiveScene().name == "CaveScene" && sceneToLoad == "CaveScene")
         {
@@ -196,14 +213,14 @@ public class PlayerControl : MonoBehaviour
         }
         yield return new WaitForSeconds(0.1f);
 
-        gridStorage.LoadGrid();
-
-        SceneSwitchGO temp = GameObject.FindGameObjectWithTag("SceneStartPos").GetComponent<SceneSwitchGO>();
-        Vector3 movePoint = temp.transform.position + temp.offset;
-
         SetAllButtonFalse();
         stopMove = false;
-        MoveToPoint(movePoint);
+
+        SceneSwitchGO temp = GameObject.FindGameObjectWithTag("SceneStartPos").GetComponent<SceneSwitchGO>();
+        if (temp.sceneToLoad == lastScene)
+            MoveToPoint(temp.transform.position + temp.offset);
+        else
+            MoveToPoint(Vector3.zero);
     }
 
     public void Move()
@@ -218,41 +235,10 @@ public class PlayerControl : MonoBehaviour
                     {
                         if (moveDir != Vector3.zero)
                         {
-                            if (Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, sceneSwitchMask))
-                            {
-                                RaycastHit2D hit;
-                                Vector3 direction = Vector3.Normalize(moveDir);
-                                if (hit = Physics2D.Raycast(playerMoveGO.position, direction))
-                                {
-                                    SceneSwitchGO temp = hit.collider.GetComponent<SceneSwitchGO>();
-                                    StartCoroutine(LoadScene(temp.sceneToLoad));
-                                }
-                            }
-                            //EnemyCollision
-                            else if (Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, enemyMask))
-                            {
-                                RaycastHit2D hit;
-                                Vector3 direction = Vector3.Normalize(moveDir);
-                                if (hit = Physics2D.Raycast(playerMoveGO.position, direction))
-                                {
-                                    CombatStart(hit.collider.gameObject);
-                                }
-                                moveDir = Vector3.zero;
-                            }
-                            //BuildingCollision
-                            else if (Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, buildingMask))
-                            {
-                                RaycastHit2D hit;
-                                Vector3 direction = Vector3.Normalize(moveDir);
-                                if (hit = Physics2D.Raycast(playerMoveGO.position, direction))
-                                {
-                                    Debug.Log(hit.collider.gameObject.name);
-                                }
-                                moveDir = Vector3.zero;
-                            }
-                            //NoCollision
-                            else if (!Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, stopMoveMask))
-                                playerMoveGO.position += moveDir;
+                            if (!MoveSceneObjCheck())
+                                if (!MoveEnemyCheck())
+                                    if (!MoveBuildingCheck())
+                                        MoveTerrainCheck();
                         }
                     }
                     transform.position = Vector3.MoveTowards(transform.position, playerMoveGO.position, moveSpeed * Time.deltaTime);
@@ -277,6 +263,7 @@ public class PlayerControl : MonoBehaviour
                     {
                         if (movePath[movePath.Count - 1] != playerMoveGO.position && moveDir == Vector3.zero)
                         {
+
                             if (movePath[movePath.Count - 1].x > playerMoveGO.position.x)
                                 RightButton();
                             else if (movePath[movePath.Count - 1].x < playerMoveGO.position.x)
@@ -286,7 +273,14 @@ public class PlayerControl : MonoBehaviour
                             else
                                 DownButton();
 
-                            playerMoveGO.position += moveDir;
+                            if (movePath.Count == 1)
+                            {
+                                if (!MoveSceneObjCheck())
+                                    if (!MoveEnemyCheck())
+                                        MoveBuildingCheck();
+                            }
+
+                            MoveTerrainCheck();
                         }
                         else if (Vector3.Distance(transform.position, playerMoveGO.position) == 0)
                         {
@@ -306,9 +300,73 @@ public class PlayerControl : MonoBehaviour
         }
     }
 
-    public void MoveBuildingCheck()
+    public bool MoveEnemyCheck()
     {
+        if (Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, enemyMask))
+        {
+            if(transform.GetChild(0).GetComponentInChildren<Weapon>())
+            {
+                RaycastHit2D hit;
+                Vector3 direction = Vector3.Normalize(moveDir);
+                if (hit = Physics2D.Raycast(playerMoveGO.position, direction))
+                {
+                    CombatStart(hit.collider.gameObject);
+                }
+                moveDir = Vector3.zero;
+                return true;
+            }
+            else
+            {
+                _UIController.GetComponent<TutorialWriter>().NoWeaponText();
+                moveDir = Vector3.zero;
+                return true;
+            }
+        }
+        return false;
+    }
 
+    public bool MoveSceneObjCheck()
+    {
+        if (Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, sceneSwitchMask))
+        {
+            RaycastHit2D hit;
+            Vector3 direction = Vector3.Normalize(moveDir);
+            if (hit = Physics2D.Raycast(playerMoveGO.position, direction))
+            {
+                SceneSwitchGO temp = hit.collider.GetComponent<SceneSwitchGO>();
+                StartCoroutine(LoadScene(temp.sceneToLoad));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public bool MoveBuildingCheck()
+    {
+        if (Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, buildingMask))
+        {
+            RaycastHit2D hit;
+            Vector3 direction = Vector3.Normalize(moveDir);
+            if (hit = Physics2D.Raycast(playerMoveGO.position, direction))
+            {
+                if(pathFindingMove)
+                    movePath.RemoveAt(movePath.Count - 1);
+                hit.collider.gameObject.GetComponent<BuildingControl>().BuildingAction(_UIController);
+            }
+            moveDir = Vector3.zero;
+            return true;
+        }
+        return false;
+    }
+
+    public bool MoveTerrainCheck()
+    {
+        if (!Physics2D.OverlapCircle(playerMoveGO.position + moveDir, 0.2f, stopMoveMask))
+        {
+            playerMoveGO.position += moveDir;
+            return true;
+        }
+        return false;
     }
 
     public bool IsLastEnemy()
@@ -342,10 +400,6 @@ public class PlayerControl : MonoBehaviour
     //Buttons
     #region
 
-    public void FleeButton()
-    {
-        CombatEnd();
-    }
     public void UpButton()
     {
         if (upPressed)
@@ -361,6 +415,7 @@ public class PlayerControl : MonoBehaviour
             {
                 moveDir = Vector3.up;
                 anim.runtimeAnimatorController = ac_Up;
+                WeaponUnderPlayerSortingOrderCheck(true);
             }
         }
     }
@@ -379,6 +434,7 @@ public class PlayerControl : MonoBehaviour
             {
                 moveDir = Vector3.right;
                 anim.runtimeAnimatorController = ac_Right;
+                WeaponUnderPlayerSortingOrderCheck(false);
             }
         }
     }
@@ -397,6 +453,7 @@ public class PlayerControl : MonoBehaviour
             {
                 moveDir = Vector3.down;
                 anim.runtimeAnimatorController = ac_Down;
+                WeaponUnderPlayerSortingOrderCheck(false);
             }
         }
     }
@@ -415,6 +472,32 @@ public class PlayerControl : MonoBehaviour
             {
                 moveDir = Vector3.left;
                 anim.runtimeAnimatorController = ac_Left;
+                WeaponUnderPlayerSortingOrderCheck(false);
+            }
+        }
+    }
+
+    public void ResetAllButtons()
+    {
+        upPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+        downPressed = false;
+    }
+
+    public void WeaponUnderPlayerSortingOrderCheck(bool isBehindPlayer)
+    {
+        if(transform.GetChild(0).GetComponentInChildren<Weapon>())
+        {
+            if (isBehindPlayer)
+            {
+                weaponSpriteRenderer.sortingOrder = playerSpriteRenderer.sortingOrder - 1;
+                weapon.GetComponentInChildren<ParticleSystemRenderer>().sortingOrder = weaponSpriteRenderer.sortingOrder;
+            }
+            else if (weaponSpriteRenderer.sortingOrder != playerSpriteRenderer.sortingOrder + 1)
+            {
+                weaponSpriteRenderer.sortingOrder = playerSpriteRenderer.sortingOrder + 1;
+                weapon.GetComponentInChildren<ParticleSystemRenderer>().sortingOrder = weaponSpriteRenderer.sortingOrder;
             }
         }
     }
@@ -428,4 +511,19 @@ public class PlayerControl : MonoBehaviour
     }
     #endregion
 
+    #region
+    public void FleeStart()
+    {
+        lastCS.Flee();
+    }
+    public void Fireball()
+    {
+        lastCS.SkillFireBall();
+    }
+
+    public void Firerain()
+    {
+        lastCS.SkillFireRain();
+    }
+    #endregion
 }

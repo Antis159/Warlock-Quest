@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class LoadFirstScene : MonoBehaviour
 {
+    public bool skipTutorial = false;
     private void Awake()
     {
         StartCoroutine(StartGame());
@@ -17,12 +18,10 @@ public class LoadFirstScene : MonoBehaviour
             yield return new WaitForSeconds(0.01f);
         }
 
-        SceneManager.LoadScene("HomeScene");
-
-        while(!SceneManager.GetActiveScene().isLoaded)
-        {
-            yield return new WaitForSeconds(.01f);
-        }
+        if(!skipTutorial)
+            SceneManager.LoadScene("TutorialScene");
+        else
+            SceneManager.LoadScene("HomeScene");
 
         yield return new WaitForSeconds(0.1f);
     }

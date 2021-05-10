@@ -98,7 +98,7 @@ LightmapSettings:
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 0}
-  m_UseShadowmask: 1
+  m_UseShadowmask: 0
 --- !u!196 &4
 NavMeshSettings:
   serializedVersion: 2
@@ -221,8 +221,13 @@ MonoBehaviour:
   - {fileID: 1887673727705328872, guid: b036bfcbd57e734489b6c1726896cb7a, type: 3}
   - {fileID: 1887673727705328872, guid: 0d09a11e014dd3a44baf3cf0c72a88e6, type: 3}
   caveExit: {fileID: 230261869235294412, guid: eddde8fb55850b44da4b7d2d945e2a0d, type: 3}
+  portal: {fileID: 3520759290352559095, guid: 83022be3afc39534a945d04ccc073451, type: 3}
+  portalRate: 2
+  lostBook: {fileID: 3847483396984988254, guid: ddf2026a6fb3d1d439b655a2ab84bcd9,
+    type: 3}
+  lostBookRate: 2
   availableEnemies:
   - {fileID: 1356163609791830660, guid: 5fa4e76a1849ab943be01f016c657598, type: 3}
-  - {fileID: 221996436345057159, guid: 620cdab785f5b97428ce4e0b31a5a813, type: 3}
+  - {fileID: 221996436345057159, guid: 0bbb1faa388689347b5f27844535259b, type: 3}
   enemyCount: 15
   parent: {fileID: 403670321}

@@ -7,10 +7,12 @@ using UnityEngine.UI;
 
 public class UIController : MonoBehaviour
 {
+    public GameObject tileMarker;
     public Slider healthBar;
     public Slider manaBar;
     public GameObject moveButtons;
     public GameObject fleeButton;
+    public GameObject skillIconParent;
     public Slider enemyHealthBar;
     public Text enemyNameText;
     public GameObject buildingButton;
@@ -25,17 +27,26 @@ public class UIController : MonoBehaviour
     public GameObject pauseMenu;
     public GameObject clickCircle;
     public GameObject buttonCircle;
+    public GameObject summoningCircleMenu;
+    public GameObject textBox;
+    public GameObject textCover;
 
     public Text healthText;
     public Text manaText;
     public Text enemyHealthText;
 
     private PlayerControl Player;
+    public int totalBuildingCount;
     public bool isBuilding;
     private GameObject lastBuildingTemp;
     private GameObject lastBuilding;
+    private GameObject lastWeapon;
+    private int lastBuildingWidth;
+    private int lastBuildingHeight;
     private GameObject buildingMouse;
     private Vector3 mousePos;
+    public GameObject buildingSpawnParticles;
+    public int lostBookRate;
 
     private MusicSoundController musicSoundController;
 
@@ -58,8 +69,6 @@ public class UIController : MonoBehaviour
         else
             floorLevel.gameObject.SetActive(false);
 
-        //if (Input.GetKeyDown(KeyCode.A))
-        //    StartCoroutine(BuildWarning());
 
         if(isBuilding)
         {
@@ -89,20 +98,29 @@ public class UIController : MonoBehaviour
                 if (Player.GetLastEnemy() != null)
                     enemyNameText.text = Player.GetLastEnemy().enemyName;
                 buildingButton.SetActive(false);
+                skillIconParent.SetActive(true);
             }
             else
             {
-                if(!Player.pathFindingMove)
-                    moveButtons.SetActive(true);
+                if(textCover.activeSelf == false)
+                {
+                    if (!Player.pathFindingMove)
+                        moveButtons.SetActive(true);
 
+                    if(gameObject.GetComponent<TutorialWriter>().buildingButton == true)
+                    {
+                        buildingButton.SetActive(true);
+                        inventory.gameObject.SetActive(true);
+                    }
+                }
+
+                skillIconParent.SetActive(false);
                 fleeButton.SetActive(false);
                 enemyHealthBar.gameObject.SetActive(false);
                 enemyHealthText.gameObject.SetActive(false);
                 enemyNameText.gameObject.SetActive(false);
-                buildingButton.SetActive(true);
                 confirmButton.SetActive(false);
                 cancelButton.SetActive(false);
-                inventory.gameObject.SetActive(true);
             }
         }
     }
@@ -163,7 +181,10 @@ public class UIController : MonoBehaviour
         StoreBuilding _storeBuilding = EventSystem.current.currentSelectedGameObject.GetComponent<StoreBuilding>();
         lastBuilding = _storeBuilding.GetBuilding();
         lastBuildingTemp = _storeBuilding.GetTempBuilding();
-        int[] buildCost = _storeBuilding.GetBuilding().GetComponent<BuildingControl>().buildCost;
+        BuildingControl buildingData = _storeBuilding.GetBuilding().GetComponent<BuildingControl>();
+        int[] buildCost = buildingData.buildCost;
+        lastBuildingHeight = buildingData.height;
+        lastBuildingWidth = buildingData.width;
         Text[] costText = GameObject.Find("BuildingCostParent").GetComponentsInChildren<Text>();
 
         foreach (Text item in costText)
@@ -171,7 +192,7 @@ public class UIController : MonoBehaviour
             item.text = "0";
         }
         costText[0].text = _storeBuilding.GetBuilding().GetComponent<BuildingControl>().buildingName;
-        for (int i = 1; i<costText.Length - 1; i++)
+        for (int i = 1; i<costText.Length; i++)
         {
             costText[i].text = buildCost[i-1].ToString();
         }
@@ -180,48 +201,51 @@ public class UIController : MonoBehaviour
 
     public void BuildSelect()
     {
-        if(lastBuilding != null)
+        int[] buildCost = lastBuilding.GetComponent<BuildingControl>().buildCost;
+        if (inventory.fireCrystalCount >= buildCost[0] &&
+            inventory.iceCrystalCount >= buildCost[1] &&
+            inventory.lightningCrystalCount >= buildCost[2] &&
+            inventory.arcaneCrystalCount >= buildCost[3] &&
+            lastBuilding != null)
         {
             isBuilding = true;
             buildingMouse = Instantiate(lastBuildingTemp, Player.transform.position + new Vector3(0, 1, 0), Quaternion.identity);
         }
+        else
+        {
+            StartCoroutine(BuildWarning());
+        }
     }
     public void ConfirmBuild()
     {
-        if(!Physics2D.OverlapCircle(new Vector2(buildingMouse.transform.position.x, buildingMouse.transform.position.y), 0.2f))
-        {
-            if (Player.gameObject.transform.position == buildingMouse.transform.position)
-            {
-                CancelBuild();
-                return;
-            }
-
-            int[] buildCost = lastBuilding.GetComponent<BuildingControl>().buildCost;
-            if (inventory.fireCrystalCount >= buildCost[0] &&
-                inventory.iceCrystalCount >= buildCost[1] &&
-                inventory.lightningCrystalCount >= buildCost[2] &&
-                inventory.arcaneCrystalCount >= buildCost[3])
-            {
-                inventory.fireCrystalCount -= buildCost[0];
-                inventory.iceCrystalCount -= buildCost[1];
-                inventory.lightningCrystalCount -= buildCost[2];
-                inventory.arcaneCrystalCount -= buildCost[3];
-
-                isBuilding = false;
-                Vector3 buildingPos = buildingMouse.transform.position;
-                DestroyImmediate(buildingMouse);
-                GameObject building = Instantiate(lastBuilding, buildingPos, Quaternion.identity);
-                building.transform.parent = GameObject.FindGameObjectWithTag("Grid").transform;
-            }
-            else 
-            {
-                StartCoroutine(BuildWarning());
-            }
-        }
-        else
+        Player.gameObject.GetComponent<CircleCollider2D>().enabled = true;
+        if (Physics2D.OverlapCircle(new Vector2(buildingMouse.transform.position.x, buildingMouse.transform.position.y), lastBuilding.GetComponent<CircleCollider2D>().radius))
         {
             CancelBuild();
+            return;
         }
+        Player.gameObject.GetComponent<CircleCollider2D>().enabled = false;
+
+        int[] buildCost = lastBuilding.GetComponent<BuildingControl>().buildCost;
+
+        inventory.fireCrystalCount -= buildCost[0];
+        inventory.iceCrystalCount -= buildCost[1];
+        inventory.lightningCrystalCount -= buildCost[2];
+        inventory.arcaneCrystalCount -= buildCost[3];
+
+        isBuilding = false;
+        Vector3 buildingPos = buildingMouse.transform.position;
+        DestroyImmediate(buildingMouse);
+        StartCoroutine(DelayBuildingSpawn(lastBuilding, buildingPos));
+        Instantiate(buildingSpawnParticles, buildingPos, Quaternion.identity);
+    }
+
+    IEnumerator DelayBuildingSpawn(GameObject building, Vector3 buildingPos)
+    {
+        yield return new WaitForSeconds(.5f);
+        GameObject spawnedBuilding = Instantiate(building, buildingPos, Quaternion.identity);
+        spawnedBuilding.transform.parent = GameObject.FindGameObjectWithTag("Grid").transform;
+        Player.GetComponent<SaveLoadGame>().SaveBaseBuildings();
     }
 
     public void CancelBuild()
@@ -334,6 +358,83 @@ public class UIController : MonoBehaviour
         }
     }
 
+    public void OrbSelect()
+    {
+        StoreOrb _storeOrb = EventSystem.current.currentSelectedGameObject.GetComponent<StoreOrb>();
+        lastWeapon = _storeOrb.GetOrb();
+        Weapon weaponData = _storeOrb.GetOrb().GetComponent<Weapon>();
+        int[] summonCost = weaponData.summonCost;
+        Text[] costText = GameObject.Find("OrbCostParent").GetComponentsInChildren<Text>();
+
+        foreach (Text item in costText)
+        {
+            item.text = "0";
+        }
+        costText[0].text = _storeOrb.GetOrb().GetComponent<Weapon>().weaponName;
+        for (int i = 1; i < costText.Length; i++)
+        {
+            costText[i].text = summonCost[i - 1].ToString();
+        }
+
+    }
+    public void SummoningCircleMenuActive()
+    {
+        summoningCircleMenu.gameObject.SetActive(!summoningCircleMenu.activeSelf);
+    }
+
+    public void LostBookRoll()
+    {
+        if (Player.buildingsUnlocked < totalBuildingCount && Random.Range(0, lostBookRate) == 0)
+        {
+            Player.buildingsUnlocked++;
+            Player.GetComponent<SaveLoadGame>().SaveBuildingUnlocks();
+            BuildingSlotCheck();
+
+        }
+        else
+        {
+            inventory.GetComponent<Inventory>().LowTableLoot(5);
+        }
+    }
+
+    public void BuildingSlotCheck()
+    {
+        for (int i=0; i< Player.buildingsUnlocked; i++)
+        {
+             buildingUI.transform.GetChild(0).GetChild(i + 1).gameObject.SetActive(true);
+        }
+    }
+
+    public void SummonWeapon()
+    {
+        Player.EquipWeapon(lastWeapon);
+        SummoningCircleMenuActive();
+    }
+
+    public void TutorialStart()
+    {
+        healthBar.gameObject.SetActive(false);
+        manaBar.gameObject.SetActive(false);
+        inventory.gameObject.SetActive(false);
+        buildingButton.SetActive(false);
+        moveButtons.SetActive(false);
+        textCover.SetActive(true);
+    }
+    public void TurnTextOff()
+    {
+        textBox.SetActive(false);
+        textCover.SetActive(false);
+        healthBar.gameObject.SetActive(true);
+        manaBar.gameObject.SetActive(true);
+        if(gameObject.GetComponent<TutorialWriter>().buildingButton == true)
+        {
+            inventory.gameObject.SetActive(true);
+            buildingButton.SetActive(true);
+            moveButtons.SetActive(true);
+        }
+        gameObject.GetComponent<TutorialWriter>().textCount = 0;
+    }
+
     public void StartPrep()
     {
 
@@ -391,6 +492,18 @@ public class UIController : MonoBehaviour
         if (pauseMenu == null)
             pauseMenu = transform.GetChild(14).gameObject;
 
+        if (summoningCircleMenu == null)
+            summoningCircleMenu = transform.GetChild(15).gameObject;
+
+        if (textBox == null)
+            textBox = transform.GetChild(16).gameObject;
+
+        if (textCover == null)
+            textCover = transform.GetChild(17).gameObject;
+
+        if (skillIconParent == null)
+            skillIconParent = transform.GetChild(18).gameObject;
+
         if (fadeScreen == null)
             fadeScreen = transform.GetChild(-1).gameObject;
 
@@ -405,6 +518,12 @@ public class UIController : MonoBehaviour
         buildWarning.SetActive(false);
         floorLevel.gameObject.SetActive(false);
         pauseMenu.SetActive(false);
+        summoningCircleMenu.SetActive(false);
+        textBox.SetActive(false);
+        textCover.SetActive(false);
+        skillIconParent.SetActive(false);
+
+        BuildingSlotCheck();
         MovementToggleCircleCheck();
     }
 }

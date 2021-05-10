@@ -12,6 +12,7 @@ public class Enemy : MonoBehaviour
     public float attackSpeed;
     public int lowLootTable;
 
+    public GameObject attackParticles;
     private Animator anim;
     private PlayerControl Player;
 
@@ -37,33 +38,10 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    public void StartCombat()
+    public void Death()
     {
-        inCombat = true;
-        StartCoroutine(SimulateCombat());
-    }
-
-    public void EndCombat()
-    {
-        if (currentHealth <= 0)
-        {
-            DestroyImmediate(gameObject);
-            Player.inventory.LowTableLoot(lowLootTable);
-        }
-
-        inCombat = false;
-        //Debug.Log("EndCombat");
-    }
-    IEnumerator SimulateCombat()
-    {
-        while (inCombat)
-        {
-            yield return new WaitForSeconds(attackSpeed);
-            Player.ReceiveDamage(damage);
-            if (Player.inCombat == false)
-                break;
-        }
-        yield return null;
+        Player.inventory.LowTableLoot(lowLootTable);
+        Destroy(gameObject);
     }
 
     public void ReceiveDamage(int damage)

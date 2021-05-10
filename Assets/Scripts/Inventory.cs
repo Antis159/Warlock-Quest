@@ -46,17 +46,17 @@ public class Inventory : MonoBehaviour
         InventoryTextUpdate();
 
         if (Input.GetKeyDown(KeyCode.Keypad1))
-            fireCrystalCount++;
+            fireCrystalCount+= 100;
         if (Input.GetKeyDown(KeyCode.Keypad2))
-            iceCrystalCount++;
+            iceCrystalCount+= 100;
         if (Input.GetKeyDown(KeyCode.Keypad3))
-            lightningCrystalCount++;
+            lightningCrystalCount+= 100;
         if (Input.GetKeyDown(KeyCode.Keypad4))
-            arcaneCrystalCount++;
+            arcaneCrystalCount+= 100;
         if (Input.GetKeyDown(KeyCode.Keypad5))
-            holySealCount++;
+            holySealCount+= 100;
         if (Input.GetKeyDown(KeyCode.Keypad6))
-            evilSealCount++;
+            evilSealCount+= 100;
     }
 
     private void InventoryTextUpdate()

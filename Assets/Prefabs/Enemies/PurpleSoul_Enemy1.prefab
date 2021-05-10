@@ -119,13 +119,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10643c3ec52fefd428ecb286e2271533, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyName: Purple Boi
+  enemyName: Purple Soul
   inCombat: 0
-  maxHealth: 10
+  maxHealth: 100
   currentHealth: 0
   damage: 1
   attackSpeed: 1
   lowLootTable: 5
+  attackParticles: {fileID: 0}
 --- !u!58 &1092294938186069189
 CircleCollider2D:
   m_ObjectHideFlags: 0

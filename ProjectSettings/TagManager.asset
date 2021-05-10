@@ -9,6 +9,7 @@ TagManager:
   - Grid
   - BoundingShape
   - Enemy
+  - SpecialSpawn
   layers:
   - Default
   - TransparentFX

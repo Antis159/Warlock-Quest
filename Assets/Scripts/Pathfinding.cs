@@ -18,7 +18,6 @@ public class Pathfinding : MonoBehaviour
         Queue<Vector3> tilesToCheck = new Queue<Vector3>();
         tilesToCheck.Enqueue(playerPos);
         Vector3 tile;
-        //_tileMarker = tileMarkerRed;
 
         for (int x = 0; x < h*2; x++)
             for (int y = 0; y < h*2; y++)
@@ -33,37 +32,19 @@ public class Pathfinding : MonoBehaviour
 
             if(isInteractable == true)
             {
-                if(tile + Vector3.up == clickedTile)
+                if (tile + Vector3.down == clickedTile ||
+                    tile + Vector3.up == clickedTile ||
+                    tile + Vector3.left == clickedTile ||
+                    tile + Vector3.right == clickedTile)
                 {
-                    pathToMove.Add(tile);
-                    //Instantiate(tileMarker, tile, quaternion.identity);
-                    break;
-                }
-                if (tile + Vector3.left == clickedTile)
-                {
-                    pathToMove.Add(tile);
-                    //Instantiate(tileMarker, tile, quaternion.identity);
-                    break;
-                }
-                if (tile + Vector3.right == clickedTile)
-                {
-                    pathToMove.Add(tile);
-                    //Instantiate(tileMarker, tile, quaternion.identity);
-                    break;
-                }
-                if (tile + Vector3.down == clickedTile)
-                {
-                    pathToMove.Add(tile);
-                    //Instantiate(tileMarker, tile, quaternion.identity);
+                    tiles[(int)clickedTile.x + h, (int)clickedTile.y + h] = tiles[(int)tile.x + h, (int)tile.y + h] + 1;
+                    pathToMove.Add(clickedTile);
                     break;
                 }
             }
             if (tile == clickedTile && isInteractable == false)
             {
-                //Debug.Log(tiles[(int)tile.x + h, (int)tile.y + h] + " - distance");
-                //Debug.Log("Found path" + tile.ToString());
                 pathToMove.Add(tile);
-                //Instantiate(tileMarker, tile, quaternion.identity);
                 break;
             }
 
@@ -71,33 +52,21 @@ public class Pathfinding : MonoBehaviour
             {
                 tiles[(int)tile.x + h, (int)tile.y + h + 1] = tiles[(int)tile.x + h, (int)tile.y + h] + 1;
                 tilesToCheck.Enqueue(tile + Vector3.up);
-
-                //Debug.Log(tile + Vector3.up + " - added to queue");
-                //Instantiate(_tileMarker, tile + Vector3.up, quaternion.identity);
             }
             if (!Physics2D.OverlapCircle(tile + Vector3.left, 0.2f) && tiles[(int)tile.x + h - 1, (int)tile.y + h] == -10)
             {
                 tiles[(int)tile.x + h - 1, (int)tile.y + h] = tiles[(int)tile.x + h, (int)tile.y + h] + 1;
                 tilesToCheck.Enqueue(tile + Vector3.left);
-
-                //Debug.Log(tile + Vector3.left + " - added to queue");
-                //Instantiate(_tileMarker, tile + Vector3.left, quaternion.identity);
             }
             if (!Physics2D.OverlapCircle(tile + Vector3.right, 0.2f) && tiles[(int)tile.x + h + 1, (int)tile.y + h] == -10)
             {
                 tiles[(int)tile.x + h + 1, (int)tile.y + h] = tiles[(int)tile.x + h, (int)tile.y + h] + 1;
                 tilesToCheck.Enqueue(tile + Vector3.right);
-
-                //Debug.Log(tile + Vector3.right + " - added to queue");
-                //Instantiate(_tileMarker, tile + Vector3.right, quaternion.identity);
             }
             if (!Physics2D.OverlapCircle(tile + Vector3.down, 0.2f) && tiles[(int)tile.x + h, (int)tile.y + h - 1] == -10)
             {
                 tiles[(int)tile.x + h, (int)tile.y + h - 1] = tiles[(int)tile.x + h, (int)tile.y + h] + 1;
                 tilesToCheck.Enqueue(tile + Vector3.down);
-
-                //Debug.Log(tile + Vector3.down + " - added to queue");
-                //Instantiate(_tileMarker, tile + Vector3.down, quaternion.identity);
             }
 
         }
@@ -123,7 +92,6 @@ public class Pathfinding : MonoBehaviour
             }
             else if(pathToMove[i] == playerPos)
             {
-                Debug.Log("path found");
                 return pathToMove;
             }
             else

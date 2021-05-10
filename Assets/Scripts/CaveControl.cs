@@ -8,6 +8,10 @@ public class CaveControl : MonoBehaviour
 {
     public GameObject[] caveLayout = new GameObject[10];
     public GameObject caveExit;
+    public GameObject portal;
+    public int portalRate;
+    public GameObject lostBook;
+    public int lostBookRate;
     public GameObject[] availableEnemies;
     public int enemyCount;
     public GameObject parent;
@@ -19,23 +23,45 @@ public class CaveControl : MonoBehaviour
         {
             GameObject spawnGo = Instantiate(caveLayout[Random.Range(0, 9)], offset, Quaternion.identity);
             spawnGo.transform.SetParent(parent.transform);
-            while (true)
+            GameObject[] specialSpawns = GameObject.FindGameObjectsWithTag("SpecialSpawn");
+            GameObject tempCaveExit = Instantiate(caveExit, specialSpawns[Random.Range(0, specialSpawns.Length)].transform.position, Quaternion.identity);
+            tempCaveExit.transform.SetParent(parent.transform);
+
+            if(Random.Range(0, portalRate) == 0)
             {
-                Vector3 spawnSpot = new Vector3(Random.Range(-10, 10), Random.Range(-10, 10), 0);
-                if (!Physics2D.OverlapCircle(spawnSpot, 0.2f) && spawnSpot != Vector3.zero)
+                for(int i=0; i<5;i++)
                 {
-                    GameObject spawnGO = Instantiate(caveExit, spawnSpot, Quaternion.identity);
-                    spawnGO.transform.SetParent(parent.transform);
-                    break;
+                    Vector3 spawnSpot = specialSpawns[Random.Range(0, specialSpawns.Length)].transform.position;
+                    if (!Physics2D.OverlapCircle(spawnSpot, 0.2f))
+                    {
+                        GameObject tempPortal = Instantiate(portal, spawnSpot, Quaternion.identity);
+                        tempPortal.transform.SetParent(parent.transform);
+                        break;
+                    }
                 }
             }
 
+            if(Random.Range(0,lostBookRate) == 0)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    Vector3 spawnSpot = specialSpawns[Random.Range(0, specialSpawns.Length)].transform.position;
+                    if (!Physics2D.OverlapCircle(spawnSpot, 0.2f))
+                    {
+                        GameObject tempLostBook = Instantiate(lostBook, spawnSpot, Quaternion.identity);
+                        tempLostBook.transform.SetParent(parent.transform);
+                        break;
+                    }
+                }
+            }
+
+
             if (enemyCount == 0)
-                enemyCount = Random.Range(5, 15);
+                enemyCount = Random.Range(10, 15);
 
             while (enemyCount > 0)
             {
-                Vector3 spawnSpot = new Vector3(Random.Range(-10, 10), Random.Range(-10, 10), 0);
+                Vector3 spawnSpot = new Vector3(Random.Range(-20, 20), Random.Range(-20, 20), 0);
                 if (!Physics2D.OverlapCircle(spawnSpot, 0.2f) && spawnSpot != Vector3.zero)
                 {
                     GameObject spawnGO = Instantiate(availableEnemies[Random.Range(0, availableEnemies.Length)], spawnSpot, Quaternion.identity);
@@ -66,6 +92,11 @@ public class CaveControl : MonoBehaviour
             Match match = Regex.Match(name, @"\d");
             GameObject spawnGO = Instantiate(availableEnemies[int.Parse(match.Value) - 1], new Vector3(x, y, 0), Quaternion.identity);
             spawnGO.transform.SetParent(parent.transform);
+        }
+        if(name.Contains("Portal"))
+        {
+            GameObject spawnGo = Instantiate(portal, new Vector3(x, y, 0), Quaternion.identity);
+            spawnGo.transform.SetParent(parent.transform);
         }
     }
 }
